@@ -8,7 +8,6 @@ let storyList;
 async function getAndShowStoriesOnStart() {
   storyList = await StoryList.getStories();
   $storiesLoadingMsg.remove();
-
   putStoriesOnPage();
 }
 
@@ -24,7 +23,7 @@ async function submitStory(evt) {
   // User.login retrieves user info from API and returns User instance
   // which we'll make the globally-available, logged-in user.
   let newStory = await storyList.addStory(currentUser, {title, author, url});
-
+  currentUser.ownStories.push(newStory);
   $submitForm.trigger("reset");
   $submitForm.hide();
 
@@ -43,13 +42,15 @@ $submitForm.on("submit", submitStory);
  * Returns the markup for the story.
  */
 
-function generateStoryMarkup(story) {
+function generateStoryMarkup(story, allowDelete) {
   // console.debug("generateStoryMarkup", story);
 
+  let isFavorite = false;
   const hostName = story.getHostName();
   return $(`
       <li id="${story.storyId}">
-        <span class="star hidden"><i class="far fa-star"></i></span>
+        ${ allowDelete ? '<span class="story-icon hidden"><i class="fas fa-trash-alt trash"></i></span>' : ''}
+        <span class="story-icon hidden"><i class="fa-star ${ currentUser && currentUser.favorites.find(s => s.storyId === story.storyId) ? 'fas' : 'far'} favorite"></i></span>
         <a href="${story.url}" target="a_blank" class="story-link">
           ${story.title}
         </a>
@@ -64,14 +65,60 @@ function generateStoryMarkup(story) {
 
 function putStoriesOnPage() {
   console.debug("putStoriesOnPage");
+  putStoryListOnScreen(storyList.stories, $allStoriesList, false);
+}
 
-  $allStoriesList.empty();
+function putFavoritesOnPage() {
+  console.debug("putFavoritesOnPage");
+  putStoryListOnScreen(currentUser.favorites, $favoriteStoriesList, false);
+}
 
-  // loop through all of our stories and generate HTML for them
-  for (let story of storyList.stories) {
-    const $story = generateStoryMarkup(story);
-    $allStoriesList.append($story);
+function putOwnStoriesOnPage() {
+  console.debug("putOwnStoriesOnPage");
+  putStoryListOnScreen(currentUser.ownStories, $favoriteStoriesList, true);
+}
+
+function putStoryListOnScreen(stories, $htmlList, allowDelete)
+{
+  $htmlList.empty();
+
+  // loop through all stories and generate HTML for them
+  for (let story of stories) {
+    const $story = generateStoryMarkup(story, allowDelete);
+    $htmlList.append($story);
   }
 
-  $allStoriesList.show();
+  if (currentUser) $('.story-icon').show();
+
+  $htmlList.show();
+}
+
+async function handleStoryClick(evt)
+{
+  if ($(evt.target).hasClass("favorite"))
+  {
+    const $star = $(evt.target);
+    const $storyLi =  $star.closest("li");
+    const story = storyList.stories.find(s => s.storyId === $storyLi.attr('id'));
+
+    if ($star.hasClass('far'))
+    {
+      currentUser.addFavorite(story);
+    }
+    else
+    {
+      currentUser.removeFavorite(story);
+    }
+
+    $star.toggleClass('far fas');
+  }
+
+  if ($(evt.target).hasClass("trash"))
+  {
+    const $storyLi =  $(evt.target).closest("li");
+    const story = storyList.stories.find(s => s.storyId === $storyLi.attr('id'));
+    await currentUser.deleteStory(story);
+    storyList.removeStory(story);
+    $storyLi.remove();
+  }
 }

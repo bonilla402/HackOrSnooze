@@ -99,6 +99,11 @@ class StoryList {
         return null;
     }
   }
+
+  removeStory(story)
+  {
+    this.stories = this.stories.filter(s => s.storyId !== story.storyId);
+  }
 }
 
 
@@ -215,5 +220,37 @@ class User {
       console.error("loginViaStoredCredentials failed", err);
       return null;
     }
+  }
+
+  
+  async addFavorite(story) {
+    this.favorites.push(story);
+    await this.addOrRemoveFavorite("POST", story)
+  }
+
+  async removeFavorite(story) {
+    this.favorites = this.favorites.filter(s => s.storyId !== story.storyId);
+    await this.addOrRemoveFavorite("DELETE", story);
+  }
+
+  async deleteStory(story) {
+    this.ownStories = this.ownStories.filter(s => s.storyId !== story.storyId);
+    this.favorites = this.favorites.filter(s => s.storyId !== story.storyId);
+
+    await axios({
+      url: `${BASE_URL}/stories/${story.storyId}`,
+      method: "DELETE",
+      data: { token: currentUser.loginToken }
+    });
+
+  }  
+
+  async addOrRemoveFavorite(method, story) {
+
+    await axios({
+      url: `${BASE_URL}/users/${this.username}/favorites/${story.storyId}`,
+      method: method,
+      data: {token: this.loginToken,},
+    });
   }
 }

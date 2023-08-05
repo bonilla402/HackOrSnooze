@@ -6,7 +6,7 @@ const $body = $("body");
 
 const $storiesLoadingMsg = $("#stories-loading-msg");
 const $allStoriesList = $("#all-stories-list");
-const $favoriteStoriesList = $("#fav-stories-list");
+const $favoriteStoriesList = $("#favorited-list");
 const $myStoriesList = $("#my-stories-list");
 
 
@@ -30,9 +30,11 @@ const $navMine = $("#nav-mine");
 function hidePageComponents() {
   const components = [
     $allStoriesList,
+    $favoriteStoriesList,
+    $myStoriesList,
     $loginForm,
     $signupForm,
-    $submitForm
+    $submitForm,
   ];
   components.forEach(c => c.hide());
 }
@@ -45,6 +47,10 @@ async function start() {
   // "Remember logged-in user" and log in, if credentials in localStorage
   await checkForRememberedUser();
   await getAndShowStoriesOnStart();
+
+  $allStoriesList.on("click", handleStoryClick);
+  $favoriteStoriesList.on("click", handleStoryClick);
+  $myStoriesList.on("click", handleStoryClick);
 
   // if we got a logged-in user
   if (currentUser) updateUIOnUserLogin();
